@@ -1,0 +1,13 @@
+<h1>Employees</h1>
+
+<p><a href="/employee/add">Add Employee</a></p>
+
+<ul>
+  {{#each employees}}
+    <li>
+      <a href="/employee/{{this.employeeId}}">
+        {{this.name}}
+      </a>
+    </li>
+  {{/each}}
+</ul>

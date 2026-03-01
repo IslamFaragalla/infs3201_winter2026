@@ -1,107 +1,104 @@
-const persistence = require('./persistence')
+const persistence = require("./persistence");
 
 /**
- * computeShiftDuration
- * Generated using ChatGPT
- * Prompt: "Write a JavaScript function that calculates number of hours between two HH:MM times"
+ * Compare two shifts by date then start time.
+ * @param {Object} a
+ * @param {Object} b
+ * @returns {number}
  */
-function computeShiftDuration(startTime, endTime) {
-
-    const startParts = startTime.split(":")
-    const endParts = endTime.split(":")
-
-    const startMinutes =
-        parseInt(startParts[0]) * 60 + parseInt(startParts[1])
-
-    const endMinutes =
-        parseInt(endParts[0]) * 60 + parseInt(endParts[1])
-
-    return (endMinutes - startMinutes) / 60
+function compareShiftDateTime(a, b) {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return 1;
+    if (a.startTime < b.startTime) return -1;
+    if (a.startTime > b.startTime) return 1;
+    return 0;
 }
 
 /**
- * Assign shift with maxDailyHours check
+ * Sort shifts by date/time (earliest first)
+ * No .sort() allowed.
+ * @param {Object[]} shifts
  */
-async function assignShift(empId, shiftId) {
+function sortShifts(shifts) {
+    for (let i = 0; i < shifts.length - 1; i++) {
+        let minIndex = i;
 
-    let employee = await persistence.findEmployee(empId)
-    if (!employee) {
-        return "Employee does not exist"
-    }
-
-    let shift = await persistence.findShift(shiftId)
-    if (!shift) {
-        return "Shift does not exist"
-    }
-
-    let existing = await persistence.findAssignment(empId, shiftId)
-    if (existing) {
-        return "Employee already assigned to shift"
-    }
-
-    // ---- MAX DAILY HOURS FEATURE ----
-
-    let config = await persistence.getConfig()
-    let maxHours = config.maxDailyHours
-
-    let assignments = await persistence.getAllAssignments()
-    let totalHours = 0
-
-    for (let i = 0; i < assignments.length; i++) {
-
-        if (assignments[i].employeeId === empId) {
-
-            let existingShift =
-                await persistence.findShift(assignments[i].shiftId)
-
-            if (existingShift.date === shift.date) {
-
-                totalHours += computeShiftDuration(
-                    existingShift.startTime,
-                    existingShift.endTime
-                )
+        for (let j = i + 1; j < shifts.length; j++) {
+            if (compareShiftDateTime(shifts[j], shifts[minIndex]) < 0) {
+                minIndex = j;
             }
         }
+
+        if (minIndex !== i) {
+            let temp = shifts[i];
+            shifts[i] = shifts[minIndex];
+            shifts[minIndex] = temp;
+        }
     }
-
-    let newHours =
-        computeShiftDuration(shift.startTime, shift.endTime)
-
-    if (totalHours + newHours > maxHours) {
-        return "Daily hour limit exceeded"
-    }
-
-    await persistence.addAssignment(empId, shiftId)
-
-    return "Ok"
 }
 
 /**
- * Get employee schedule
+ * Get all employees
+ */
+async function getAllEmployees() {
+    return await persistence.getAllEmployees();
+}
+
+/**
+ * Get one employee by ID
+ */
+async function getEmployeeById(empId) {
+    return await persistence.findEmployee(empId);
+}
+
+/**
+ * Update employee name + phone
+ */
+async function updateEmployee(empId, name, phone) {
+    let employee = await persistence.findEmployee(empId);
+    if (!employee) {
+        return false;
+    }
+
+    await persistence.updateEmployee(empId, name, phone);
+    return true;
+}
+
+/**
+ * Add new employee
+ */
+async function addEmployee(name, phone) {
+    await persistence.addEmployeeRecord({
+        name: name,
+        phone: phone
+    });
+}
+
+/**
+ * Get employee schedule (joined via assignments)
  */
 async function getEmployeeSchedule(empId) {
 
-    let assignments = await persistence.getAllAssignments()
-    let shifts = await persistence.getAllShifts()
-    let result = []
+    let assignments = await persistence.getAssignmentsByEmployee(empId);
+    let result = [];
 
     for (let i = 0; i < assignments.length; i++) {
 
-        if (assignments[i].employeeId === empId) {
+        let shift = await persistence.findShift(assignments[i].shiftId);
 
-            for (let j = 0; j < shifts.length; j++) {
-
-                if (shifts[j].shiftId === assignments[i].shiftId) {
-                    result.push(shifts[j])
-                }
-            }
+        if (shift) {
+            result.push(shift);
         }
     }
 
-    return result
+    sortShifts(result);
+    return result;
 }
 
 module.exports = {
-    assignShift,
+    getAllEmployees,
+    getEmployeeById,
+    updateEmployee,
+    addEmployee,
     getEmployeeSchedule
-}
+};

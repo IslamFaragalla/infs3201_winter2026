@@ -1,117 +1,86 @@
-const fs = require('fs/promises')
+const { MongoClient } = require("mongodb");
+const fs = require("fs/promises");
 
-/**
- * Get all employees
- */
+const DB_NAME = "infs3201_winter2026";
+
+let _client = null;
+let _db = null;
+
+async function connect() {
+    if (_db) return;
+
+    let uri = (await fs.readFile("mongodb_uri.txt", "utf8")).trim();
+    if (!uri) {
+        throw new Error("MongoDB URI is empty");
+    }
+
+    _client = new MongoClient(uri);
+    await _client.connect();
+    _db = _client.db("infs3201_winter2026");
+}
+
 async function getAllEmployees() {
-    let rawData = await fs.readFile('employees.json')
-    return JSON.parse(rawData)
+    await connect();
+    return await _db.collection("employees").find({}).toArray();
 }
 
-/**
- * Get all shifts
- */
-async function getAllShifts() {
-    let rawData = await fs.readFile('shifts.json')
-    return JSON.parse(rawData)
-}
-
-/**
- * Get all assignments
- */
-async function getAllAssignments() {
-    let rawData = await fs.readFile('assignments.json')
-    return JSON.parse(rawData)
-}
-
-/**
- * Find employee
- */
 async function findEmployee(empId) {
-    let list = await getAllEmployees()
-    for (let i = 0; i < list.length; i++) {
-        if (list[i].employeeId === empId) {
-            return list[i]
-        }
-    }
-    return undefined
+    await connect();
+    return await _db.collection("employees").findOne({ employeeId: empId });
 }
 
-/**
- * Find shift
- */
-async function findShift(shiftId) {
-    let list = await getAllShifts()
-    for (let i = 0; i < list.length; i++) {
-        if (list[i].shiftId === shiftId) {
-            return list[i]
-        }
-    }
-    return undefined
+async function updateEmployee(empId, name, phone) {
+    await connect();
+    await _db.collection("employees").updateOne(
+        { employeeId: empId },
+        { $set: { name: name, phone: phone } }
+    );
 }
 
-/**
- * Find assignment
- */
-async function findAssignment(empId, shiftId) {
-    let list = await getAllAssignments()
-    for (let i = 0; i < list.length; i++) {
-        if (list[i].employeeId === empId &&
-            list[i].shiftId === shiftId) {
-            return list[i]
-        }
-    }
-    return undefined
-}
-
-/**
- * Add assignment
- */
-async function addAssignment(empId, shiftId) {
-    let list = await getAllAssignments()
-    list.push({ employeeId: empId, shiftId: shiftId })
-    await fs.writeFile('assignments.json',
-        JSON.stringify(list, null, 4))
-}
-
-/**
- * Add employee
- */
 async function addEmployeeRecord(emp) {
+    await connect();
 
-    let list = await getAllEmployees()
-    let maxId = 0
+    let last = await _db.collection("employees")
+        .find({})
+        .sort({ employeeId: -1 })
+        .limit(1)
+        .toArray();
 
-    for (let i = 0; i < list.length; i++) {
-        let eid = Number(list[i].employeeId.slice(1))
-        if (eid > maxId) {
-            maxId = eid
-        }
+    let maxNum = 0;
+
+    if (last.length > 0) {
+        let n = Number(last[0].employeeId.slice(1));
+        if (!Number.isNaN(n)) maxNum = n;
     }
 
-    emp.employeeId = `E${String(maxId + 1).padStart(3, '0')}`
-    list.push(emp)
+    let newId = `E${String(maxNum + 1).padStart(3, "0")}`;
 
-    await fs.writeFile('employees.json',
-        JSON.stringify(list, null, 4))
+    await _db.collection("employees").insertOne({
+        employeeId: newId,
+        name: emp.name,
+        phone: emp.phone
+    });
 }
 
-/**
- * Get config
- */
-async function getConfig() {
-    let raw = await fs.readFile('config.json')
-    return JSON.parse(raw)
+async function getAssignmentsByEmployee(empId) {
+    await connect();
+    return await _db.collection("assignments")
+        .find({ employeeId: empId })
+        .toArray();
+}
+
+async function findShift(shiftId) {
+    await connect();
+    return await _db.collection("shifts")
+        .findOne({ shiftId: shiftId });
 }
 
 module.exports = {
+    connect,
     getAllEmployees,
-    getAllShifts,
-    getAllAssignments,
     findEmployee,
-    findShift,
-    findAssignment,
-    addAssignment,
-    addEmployeeRecord,
-    getConfig
-}
+    updateEmployee,
+    addEmployeeRecord,   // ← THIS WAS MISSING
+    getAssignmentsByEmployee,
+    findShift
+};

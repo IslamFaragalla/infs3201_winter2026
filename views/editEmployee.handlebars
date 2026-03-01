@@ -1,0 +1,19 @@
+<h1>Edit Employee</h1>
+
+<form method="POST" action="/employee/{{employee.employeeId}}/edit">
+  <div>
+    <label>Name:</label>
+    <input type="text" name="name" value="{{employee.name}}">
+  </div>
+
+  <div>
+    <label>Phone:</label>
+    <input type="text" name="phone" value="{{employee.phone}}">
+  </div>
+
+  <button type="submit">Save</button>
+</form>
+
+<p>
+  <a href="/employee/{{employee.employeeId}}">Cancel</a>
+</p>
