@@ -1,13 +1,18 @@
 <h1>Employees</h1>
 
-<p><a href="/employee/add">Add Employee</a></p>
-
 <ul>
-  {{#each employees}}
-    <li>
-      <a href="/employee/{{this.employeeId}}">
-        {{this.name}}
-      </a>
-    </li>
-  {{/each}}
+{{#each employees}}
+  <li>
+    <a href="/employee/{{_id}}">
+      {{name}}
+    </a>
+  </li>
+{{/each}}
 </ul>
+
+{{!-- <a href="/employee/add">Add Employee</a> --}}
+<a href="/addEmployee">Add Employee</a>
+<br>
+<a href="/shifts">View Shifts</a>
+<br>
+<a href="/addShift">Add Shift</a>

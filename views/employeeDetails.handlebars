@@ -1,16 +1,14 @@
 <h1>Employee Details</h1>
 
-<p><strong>ID:</strong> {{employee.employeeId}}</p>
-<p><strong>Name:</strong> {{employee.name}}</p>
-<p><strong>Phone:</strong> {{employee.phone}}</p>
+<p><b>ID:</b> {{employee._id}}</p>
+<p><b>Name:</b> {{employee.name}}</p>
+<p><b>Phone:</b> {{employee.phone}}</p>
 
-<p>
-  <a href="/employee/{{employee.employeeId}}/edit">Edit Details</a>
-</p>
+<a href="/editEmployee/{{employee._id}}">Edit Details</a>
 
 <h2>Shifts</h2>
 
-<table border="1" cellpadding="5">
+<table border="1">
   <tr>
     <th>Date</th>
     <th>Start</th>
@@ -18,14 +16,13 @@
   </tr>
 
   {{#each shifts}}
-    <tr>
-      <td>{{this.date}}</td>
-      <td class="{{morningClass this.startTime}}">
-        {{this.startTime}}
-      </td>
-      <td>{{this.endTime}}</td>
-    </tr>
+  <tr>
+    <td>{{date}}</td>
+    <td>{{startTime}}</td>
+    <td>{{endTime}}</td>
+  </tr>
   {{/each}}
 </table>
 
-<p><a href="/">Back</a></p>
+<br>
+<a href="/">Back</a>

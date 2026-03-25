@@ -1,0 +1,23 @@
+<h1>Shifts</h1>
+
+<a href="/addShift">Add Shift</a>
+
+<ul>
+  {{#each shifts}}
+  <li>
+    <b>{{date}}</b> ({{startTime}} - {{endTime}})
+
+    <form method="POST" action="/assign">
+      <input type="hidden" name="shiftId" value="{{_id}}">
+
+      <select name="empId">
+        {{#each ../employees}}
+          <option value="{{_id}}">{{name}}</option>
+        {{/each}}
+      </select>
+
+      <button>Assign</button>
+    </form>
+  </li>
+  {{/each}}
+</ul>

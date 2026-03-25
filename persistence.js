@@ -1,86 +1,118 @@
-const { MongoClient } = require("mongodb");
-const fs = require("fs/promises");
+const { MongoClient, ObjectId } = require("mongodb");
 
-const DB_NAME = "infs3201_winter2026";
+const url = "mongodb://127.0.0.1:27017";
+const dbName = "infs3201_winter2026";
 
-let _client = null;
-let _db = null;
+let db;
 
 async function connect() {
-    if (_db) return;
-
-    let uri = (await fs.readFile("mongodb_uri.txt", "utf8")).trim();
-    if (!uri) {
-        throw new Error("MongoDB URI is empty");
-    }
-
-    _client = new MongoClient(uri);
-    await _client.connect();
-    _db = _client.db("infs3201_winter2026");
+  const client = new MongoClient(url);
+  await client.connect();
+  db = client.db(dbName);
+  console.log("Connected to MongoDB");
 }
+
+// ---------------- EMPLOYEES ----------------
 
 async function getAllEmployees() {
-    await connect();
-    return await _db.collection("employees").find({}).toArray();
+  return await db.collection("employees").find().toArray();
 }
 
-async function findEmployee(empId) {
-    await connect();
-    return await _db.collection("employees").findOne({ employeeId: empId });
+async function getEmployeeById(id) {
+  return await db.collection("employees").findOne({
+    _id: new ObjectId(id)
+  });
 }
 
-async function updateEmployee(empId, name, phone) {
-    await connect();
-    await _db.collection("employees").updateOne(
-        { employeeId: empId },
-        { $set: { name: name, phone: phone } }
-    );
+async function addEmployee(name, phone) {
+  return await db.collection("employees").insertOne({
+    name,
+    phone
+  });
 }
 
-async function addEmployeeRecord(emp) {
-    await connect();
-
-    let last = await _db.collection("employees")
-        .find({})
-        .sort({ employeeId: -1 })
-        .limit(1)
-        .toArray();
-
-    let maxNum = 0;
-
-    if (last.length > 0) {
-        let n = Number(last[0].employeeId.slice(1));
-        if (!Number.isNaN(n)) maxNum = n;
-    }
-
-    let newId = `E${String(maxNum + 1).padStart(3, "0")}`;
-
-    await _db.collection("employees").insertOne({
-        employeeId: newId,
-        name: emp.name,
-        phone: emp.phone
-    });
+async function updateEmployee(id, name, phone) {
+  return await db.collection("employees").updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { name, phone } }
+  );
 }
 
-async function getAssignmentsByEmployee(empId) {
-    await connect();
-    return await _db.collection("assignments")
-        .find({ employeeId: empId })
-        .toArray();
+// ---------------- SHIFTS ----------------
+
+async function getAllShifts() {
+  return await db.collection("shifts").find().toArray();
 }
 
-async function findShift(shiftId) {
-    await connect();
-    return await _db.collection("shifts")
-        .findOne({ shiftId: shiftId });
+async function addShift(date, startTime, endTime) {
+  return await db.collection("shifts").insertOne({
+    date,
+    startTime,
+    endTime,
+    employees: []
+  });
+}
+
+async function getShiftsForEmployee(empId) {
+  return await db.collection("shifts").find({
+    employees: new ObjectId(empId)
+  }).toArray();
+}
+
+// ---------------- ASSIGN ----------------
+
+async function assignEmployee(empId, shiftId) {
+  return await db.collection("shifts").updateOne(
+    { _id: new ObjectId(shiftId) },
+    { $addToSet: { employees: new ObjectId(empId) } }
+  );
+}
+
+const crypto = require("crypto");
+
+// USERS
+async function getUser(username) {
+  return await db.collection("user").findOne({ user: username });
+}
+
+// SESSIONS
+async function startSession(sessionData) {
+  return await db.collection("session").insertOne(sessionData);
+}
+
+async function getSession(key) {
+  return await db.collection("session").findOne({ key });
+}
+
+async function deleteSession(key) {
+  return await db.collection("session").deleteOne({ key });
+}
+
+async function updateSessionExpiry(key, newExpiry) {
+  return await db.collection("session").updateOne(
+    { key },
+    { $set: { expiry: newExpiry } }
+  );
+}
+
+async function addLog(entry) {
+  return await db.collection("security_log").insertOne(entry);
 }
 
 module.exports = {
-    connect,
-    getAllEmployees,
-    findEmployee,
-    updateEmployee,
-    addEmployeeRecord,   // ← THIS WAS MISSING
-    getAssignmentsByEmployee,
-    findShift
+  connect,
+  getAllEmployees,
+  getEmployeeById,
+  addEmployee,
+  updateEmployee,
+  getAllShifts,
+  addShift,
+  getShiftsForEmployee,
+  assignEmployee,
+  getUser,
+  startSession,
+  getSession,
+  deleteSession,
+  updateSessionExpiry,
+  addLog,
 };

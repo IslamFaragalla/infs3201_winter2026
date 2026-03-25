@@ -1,0 +1,18 @@
+Collections changed:
+- Removed assignments collection
+- Embedded employees inside shifts
+
+Persistence changes:
+- Removed assignment functions
+- Added assignEmployee using shifts.employees array
+
+Business logic:
+- Updated to use ObjectId instead of employeeId/shiftId
+- Updated shift queries to use embedded employees
+
+Embedded arrays:
+- Employees stored inside shifts using ObjectId list
+
+Risks:
+- Data migration errors
+- ObjectId conversion issues
